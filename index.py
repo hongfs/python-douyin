@@ -53,7 +53,7 @@ class DY(object):
 
     def getLocation(self):
         response = requests.get(self.share_url, headers=self.headers, allow_redirects=False)
-        if response.headers['Location']:
+        if 'Location' in response.headers.keys():
             return response.headers['Location']
         else:
             return self.share_url
