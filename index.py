@@ -113,7 +113,7 @@ class DY(object):
         self.getUserData(self.uid, data['max_cursor'])
     
     def download(self, vid, path):
-        url = 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=%s&line=0' % str(vid)
+        url = 'https://aweme.snssdk.com/aweme/v1/play/?video_id=%s&line=0' % str(vid)
         with closing(requests.get(url, headers=self.headers, stream=True)) as response:
             chunk_size = 1024
             content_size = int(response.headers['content-length'])
