@@ -1,4 +1,4 @@
-import requests, json, re, os, sys
+import requests, json, re, os, sys, time
 from urllib.parse import urlparse
 from contextlib import closing
 
@@ -24,7 +24,7 @@ class DY(object):
 
     def run(self):
         self.share_url = input('请输入分享链接：')
-        # self.share_url = 'http://v.douyin.com/WT8gq/'
+        # self.share_url = 'http://v.douyin.com/7CDeV/'
 
         if not self.share_url:
             return self.run()
@@ -43,7 +43,7 @@ class DY(object):
             vid = re.findall(r'\/share\/video\/(\d*)', share_url_parse.path)
 
             if vid:
-                self.getUid(vid[0])
+                self.getUid(self.share_url)
             else:
                 print('链接无法识别，请提交issues')
                 return self.run()
@@ -58,20 +58,19 @@ class DY(object):
         else:
             return self.share_url
 
-    def getUid(self, vid):
-        response = requests.get('https://www.douyin.com/share/video/%s' % vid, headers=self.headers)
+    def getUid(self, url):
+        response = requests.get(url, headers=self.headers)
         if not response.status_code == 200:
-            return print('请求失败')
+            return False
 
         uid = re.findall(r'uid?: \"(\d*)"', response.text)
-        
         if uid:
             self.uid = uid[0]
         else:
-            return print('请求失败')
+            return False
 
     def getUserData(self, uid, cursor = 0):
-        url = 'https://www.douyin.com/aweme/v1/aweme/post/?user_id=%s&max_cursor=%s&count=35' % (uid, cursor)
+        url = 'https://www.douyin.com/aweme/v1/aweme/favorite/?user_id=%s&max_cursor=%s&count=35' % (uid, cursor)
 
         response = requests.get(url, headers=self.headers)
         if not response.status_code == 200:
@@ -85,21 +84,24 @@ class DY(object):
         if len(data['aweme_list']) == 0:
             return print('\n完成')
 
-        nickname = data['aweme_list'][0]['author']['nickname']
+        self.nickname = data['aweme_list'][0]['author']['nickname']
 
-        if cursor == 0 and nickname not in os.listdir():
-            os.mkdir(nickname)
+        if cursor == 0 and self.nickname not in os.listdir():
+            os.mkdir(self.nickname)
 
         for item in data['aweme_list']:
             if not 'video' in item.keys():
                 continue
 
+            if not self.nickname == item['author']['nickname']:
+                return print('\n完成')
+
             video_id = item['video']['play_addr']['uri']
             video_name = item['desc'] if item['desc'] else video_id
-            for c in r'\/:*?"<>|':
+            for c in r'\/:*?"<>|/':
                 video_name = video_name.replace(c, '')
-            path = os.path.join(nickname, video_name) + '.mp4'
-            
+            path = os.path.join(self.nickname, video_name) + '.mp4'
+
             self.count = self.count + 1
             print('第' + str(self.count) + '个：')
 
@@ -113,6 +115,7 @@ class DY(object):
         self.getUserData(self.uid, data['max_cursor'])
     
     def download(self, vid, path):
+        time.sleep(1)
         url = 'https://aweme.snssdk.com/aweme/v1/play/?video_id=%s&line=0' % str(vid)
         with closing(requests.get(url, headers=self.headers, stream=True)) as response:
             chunk_size = 1024
@@ -120,7 +123,7 @@ class DY(object):
             if response.status_code == 200:
                 print('  [文件大小]:%0.2f MB\n' % (content_size / chunk_size / 1024))
 
-                with open(path, 'wb') as file:
+                with open(r'' + path, 'wb') as file:
                     for data in response.iter_content(chunk_size = chunk_size):
                         file.write(data)
                         file.flush()
